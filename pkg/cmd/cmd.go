@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/klog/v2"
+
 	"k8s.io/kubectl/pkg/cmd/annotate"
 	"k8s.io/kubectl/pkg/cmd/apiresources"
 	"k8s.io/kubectl/pkg/cmd/apply"
@@ -78,6 +79,7 @@ import (
 	"k8s.io/kubectl/pkg/util/term"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+
 	"k8s.io/kubectl/pkg/cmd/kustomize"
 )
 
@@ -267,7 +269,7 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 
 	flags.BoolVar(&warningsAsErrors, "warnings-as-errors", warningsAsErrors, "Treat warnings received from the server as errors and exit with a non-zero exit code")
 
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(1000)
 	kubeConfigFlags.AddFlags(flags)
 	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
 	matchVersionKubeConfigFlags.AddFlags(cmds.PersistentFlags())
@@ -396,16 +398,18 @@ func NewKubectlCommand(in io.Reader, out, err io.Writer) *cobra.Command {
 }
 
 // addCmdHeaderHooks performs updates on two hooks:
-//   1) Modifies the passed "cmds" persistent pre-run function to parse command headers.
-//      These headers will be subsequently added as X-headers to every
-//      REST call.
-//   2) Adds CommandHeaderRoundTripper as a wrapper around the standard
-//      RoundTripper. CommandHeaderRoundTripper adds X-Headers then delegates
-//      to standard RoundTripper.
+//  1. Modifies the passed "cmds" persistent pre-run function to parse command headers.
+//     These headers will be subsequently added as X-headers to every
+//     REST call.
+//  2. Adds CommandHeaderRoundTripper as a wrapper around the standard
+//     RoundTripper. CommandHeaderRoundTripper adds X-Headers then delegates
+//     to standard RoundTripper.
+//
 // For beta, these hooks are updated unless the KUBECTL_COMMAND_HEADERS environment variable
 // is set, and the value of the env var is false (or zero).
 // See SIG CLI KEP 859 for more information:
-//   https://github.com/kubernetes/enhancements/tree/master/keps/sig-cli/859-kubectl-headers
+//
+//	https://github.com/kubernetes/enhancements/tree/master/keps/sig-cli/859-kubectl-headers
 func addCmdHeaderHooks(cmds *cobra.Command, kubeConfigFlags *genericclioptions.ConfigFlags) {
 	// If the feature gate env var is set to "false", then do no add kubectl command headers.
 	if value, exists := os.LookupEnv(kubectlCmdHeaders); exists {
